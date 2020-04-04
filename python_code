@@ -1,0 +1,321 @@
+import requests
+import lxml
+import csv
+from bs4 import BeautifulSoup,NavigableString
+import re
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def financials(link1):
+    header = []
+    url = link1
+    html = requests.get(url).text
+    soup = BeautifulSoup(html, "lxml")
+    table = soup.find("table")
+    with open('prices.csv', 'w', newline='') as f_output:
+        csv_output = csv.writer(f_output)
+        csv_output.writerow(header)
+        list_all_sharefinancials = []
+        if table is None:
+            last_year = {"Revenue":0, "Operating Profit/(Loss)":0,
+                         "Net Interest": 0, "Profit Before Tax": 0, 
+                         "Profit after tax from continuing operations": 0, 
+                         "Profit after tax from discontinuing operations": 0, 
+                         "Profit for the period": 0, 
+                         "Equity holders of parent company": 0, 
+                         "Minority Interests / Other Equity": 0,
+                         "Total Dividend Paid": 0, 
+                         "Retained Profit / (Loss) for the Financial Year": 0,
+                         "Basic EPS": 0, "Diluted EPS": 0,
+                         "Adjusted EPS": 0, "Dividend per Share": 0, 
+                         "Intangible Assets": 0, 
+                         "Non Current Assets": 0, "Current Assets": 0, 
+                         "Total Assets": 0, "Current Liabilities": 0, 
+                         "Non-Current Liabilites": 0, 
+                         "Total Liabilities": 0, "Net Assets": 0, 
+                         "Shareholders Equity": 0,
+                         "Total Equity": 0}
+            return last_year
+        else:
+            for tr in table.find_all('tr'):
+                row = [td.get_text(strip=True) for td in tr.find_all('td')]
+                csv_output.writerow(row)
+                # appending all 5 year financials per row to list
+                list_all_sharefinancials.append(row)  
+            list_all_sharefinancials = list_all_sharefinancials[2:]
+            row_names = list(x[0:1] for x in list_all_sharefinancials)
+            list_all_sharefinancials.pop(5)
+            list_all_sharefinancials.pop(7)
+            list_all_sharefinancials.pop(11)
+            list_all_sharefinancials.pop(15)
+            list_all_sharefinancials.pop(16)
+            list_all_sharefinancials.pop(25)
+            list_all_sharefinancials.pop(33)
+            list_all_sharefinancials.pop(38)
+            list_all_sharefinancials.pop(45)
+            last_year_title_figure = list(x[0:2] for x in list_all_sharefinancials)
+            numbers = list(x[1:2] for x in last_year_title_figure)
+            last_year = {"Revenue":numbers[0], "Operating Profit/(Loss)":numbers[1],
+                         "Net Interest": numbers[2], "Profit Before Tax": numbers[3], 
+                         "Profit after tax from continuing operations": numbers[4], 
+                         "Profit after tax from discontinuing operations": numbers[5], 
+                         "Profit for the period": numbers[6], 
+                         "Equity holders of parent company": numbers[7], 
+                         "Minority Interests / Other Equity": numbers[8],
+                         "Total Dividend Paid": numbers[9], 
+                         "Retained Profit / (Loss) for the Financial Year": numbers[10],
+                         "Basic EPS": numbers[11], "Diluted EPS": numbers[12],
+                         "Adjusted EPS": numbers[13], "Dividend per Share": numbers[14], 
+                         "Intangible Assets": numbers[19], 
+                         "Non Current Assets": numbers[24], "Current Assets": numbers[30], 
+                         "Total Assets": numbers[32], "Current Liabilities": numbers[36], 
+                         "Non-Current Liabilites": numbers[41], 
+                         "Total Liabilities": numbers[43], "Net Assets": numbers[44], 
+                         "Shareholders Equity": numbers[49],
+                         "Total Equity": numbers[51]}
+            return last_year
+
+def list_to_float(dictionary, name):
+    value = str(dictionary[name])
+    if value == "['n/a']":
+        value = 0
+    elif value == "n/a":
+        value = "Error not enough information"
+    elif value == "bn/a":
+        value = 0
+    elif value == "'bn/a'":
+        value = 0
+    elif value == "['bn/a']":
+        value = 0
+    else:
+        value = value.replace("'","")
+        value = value.replace("[","")
+        value = value.replace("]","")
+        value = value.replace(",","")
+        value = value.replace("¢","")
+        value = value.replace("a","")
+        if "(" in value:
+            value = value.replace("(","")
+            value = value.replace(")","")
+            value = float(value)
+            return value*-1
+        else:
+            value = float(value)
+    return value
+
+# Rule: Positive EPS over the last 5 years    
+def financials_2(link1):
+    header = []
+    url = link1
+    html = requests.get(url).text
+    soup = BeautifulSoup(html, "lxml")
+    table = soup.find("table")
+
+    with open('prices.csv', 'w', newline='') as f_output:
+        csv_output = csv.writer(f_output)
+        csv_output.writerow(header)
+        list_all_sharefinancials = []
+        if table is None:
+            list_all_sharefinancials = [0]
+            return list_all_sharefinancials
+        else:
+            for tr in table.find_all('tr'):
+                row = [td.get_text(strip=True) for td in tr.find_all('td')]
+                csv_output.writerow(row)
+                # appending all 5 year financials per row to list
+                list_all_sharefinancials.append(row)    
+            list_all_sharefinancials = list_all_sharefinancials[2:]
+            row_names = list(x[0:1] for x in list_all_sharefinancials)
+            list_all_sharefinancials.pop(5)
+            list_all_sharefinancials.pop(7)
+            list_all_sharefinancials.pop(11)
+            list_all_sharefinancials.pop(15)
+            list_all_sharefinancials.pop(16)
+            list_all_sharefinancials.pop(25)
+            list_all_sharefinancials.pop(33)
+            list_all_sharefinancials.pop(38)
+            list_all_sharefinancials.pop(45)
+            return list_all_sharefinancials
+
+def list_to_float_EPS(value):
+    value = str(value)
+    if value == "['n/a']":
+        value = 0
+    elif value == "'bn/a'":
+        value = 0
+    elif value == "['bn/a']":
+        value = 0
+    elif value == "n/a":
+        value = "Error not enough information"
+    else:
+        value = value.replace("p","")
+        value = value.replace("'","")
+        value = value.replace("[","")
+        value = value.replace("]","")
+        value = value.replace(",","")
+        value = value.replace("¢","")
+        value = value.replace("a","")
+        if "(" in value:
+            value = value.replace("(","")
+            value = value.replace(")","")
+            value = float(value)
+            return value*-1
+        else:
+            value = float(value)
+    return value
+
+def ataglance_financials(webaddress):
+    result = requests.get(webaddress)
+    src = result.content
+    soup = BeautifulSoup(src, 'lxml')
+    links = soup.find_all("strong")
+    figures = []
+    for i in links:
+        figures.append(i)
+    figures = str(figures)
+    matches = re.findall(r'[-]?\d[\d,]*[\.]?[\d{2}]*', figures)
+    links_2 = soup.find("span", {"class":"ask price-divide"})
+    for i in links_2:
+        figures_2 = i.string
+    figures_2 = str(figures_2)
+    matches_2 = re.findall(r'[-]?\d[\d,]*[\.]?[\d{2}]*', figures_2)
+    buy_price = matches_2
+    mydict = {"Buy Price":buy_price, "Open":matches[3], 
+              "Trade high":matches[4],"Year high":matches[5], 
+              "Market cap.":matches[6], "Previous Close":matches[7], 
+              "Trade low":matches[8], "Year low":matches[9], 
+              "P/E ratio":matches[10], "Volume":matches[11], 
+              "Dividend yield":matches[12], "EMS":matches[13]}
+    return mydict
+
+def main(link1, link2):
+    CA = (list_to_float(financials(link1), "Current Assets"))
+    CL = (list_to_float(financials(link1), "Current Liabilities"))
+    TL = (list_to_float(financials(link1), "Total Liabilities"))
+    TA = (list_to_float(financials(link1), "Total Assets"))
+    Net_Current_Assets = round(TA - TL,2)
+    if CA == 0 or CL == 0:
+        CACL = "Error"
+    # Rule: Current Assets must be 1.5 times Current Liabilities
+    elif CA > (CL*1.5):
+        CACL = "Pass"
+    else:
+        CACL = "Fail"
+
+    # Rule: Total Liabilities no more than 110% of Net Current Assets
+    if Net_Current_Assets == 0:
+        TLNCA = "Error"
+    elif Net_Current_Assets > (TL*1.1):
+        TLNCA = "Pass"
+    else:
+        TLNCA = "Fail"
+
+    adjusted_EPS_2019 = list_to_float_EPS(financials_2(link1)[13][1])
+    adjusted_EPS_2018 = list_to_float_EPS(financials_2(link1)[13][2])
+    adjusted_EPS_2017 = list_to_float_EPS(financials_2(link1)[13][3])
+    adjusted_EPS_2016 = list_to_float_EPS(financials_2(link1)[13][4])
+    adjusted_EPS_2015 = list_to_float_EPS(financials_2(link1)[13][5])
+    if adjusted_EPS_2015 < adjusted_EPS_2016 < adjusted_EPS_2017 < adjusted_EPS_2018 < adjusted_EPS_2019:
+        eps_growth = "Pass"
+    else:
+        eps_growth = "Fail"
+            
+    price = list_to_float(ataglance_financials(link2), "Buy Price")
+    # Rule: P/E Ratio under 9.0
+    PE_Ratio = round(price / adjusted_EPS_2019,2)
+    if price == 0:
+        pe_9 = "Error"
+    elif PE_Ratio < 9: pe_9 = "Pass"
+    else: pe_9 = "Fail"
+
+    # Rule: Price less than 120% of Net Tangible Assets
+    # this is missing deduction of par value of preferred stock
+    # par value of preferred stock = no of shares issues * value per share
+
+    intangible_assets = list_to_float(financials(link1), "Intangible Assets")
+    NTA = TA - intangible_assets - TL
+
+    if price < (NTA*1.20): price_NTA = "Pass"
+    else: price_NTA = "Fail"
+
+    # Rule: No deficit in earnings in the last 5 years
+
+    operating_profit_2019 = list_to_float_EPS(financials_2(link1)[1][1])
+    operating_profit_2018 = list_to_float_EPS(financials_2(link1)[1][2])
+    operating_profit_2017 = list_to_float_EPS(financials_2(link1)[1][3])
+    operating_profit_2016 = list_to_float_EPS(financials_2(link1)[1][4])
+    operating_profit_2015 = list_to_float_EPS(financials_2(link1)[1][5])
+    if operating_profit_2019 == 0:
+        e_growth = "Error"
+    elif operating_profit_2019 > operating_profit_2018 > operating_profit_2017 > operating_profit_2016 > operating_profit_2015:
+        e_growth = "Pass"
+    else: e_growth = "Fail"
+
+    # Rule: Have a dividend
+    
+    mymaindict = {"Company":name, "Current Assets":CA, "Current Liabilites":CL, 
+                  "CA 1.5 times CL":CACL, 
+                  "Net Current Assets":Net_Current_Assets,
+                  "Total Liabilites":TL,
+                  "TL no more than 110% of Net Current Assets":TLNCA,
+                  "Adjusted EPS 2019":adjusted_EPS_2019,
+                  "5 Year EPS Growth":eps_growth, "Buy Price":price, 
+                  "PE Ratio":PE_Ratio, "PE Under 9":pe_9,
+                  "Price under 120% NTA":price_NTA,
+                  "5 year earnings growth":e_growth,
+                  "Dividend Yield":list_to_float(ataglance_financials(link2), "Dividend yield")}
+    return mymaindict
+
+def reading_sheet():
+    file_shares = open("Shares.txt", 'r')
+    road_map = []        
+    for line in file_shares:
+        road_map.append(tuple(line.strip().split('\t')))
+    file_shares.close()
+    return road_map
+
+road_map = reading_sheet()
+list_of_all = []
+for i in road_map:
+    name = i[0]
+    link1 = i[2]
+    link2 = i[1]
+    list_of_all.append(main(link1,link2))
+    
+df = pd.DataFrame(list_of_all)
+writer = pd.ExcelWriter('matrix.xlsx', engine='xlsxwriter')
+df.to_excel(writer, index=False, sheet_name='Sheet1')
+workbook = writer.book
+worksheet = writer.sheets['Sheet1']
+worksheet.set_zoom(100)
+
+green_colour = workbook.add_format({'bg_color': '#C6EFCE',
+                               'font_color': '#006100'})
+red_colour = workbook.add_format({'bg_color': '#FFC7CE',
+                               'font_color': '#9C0006'})
+amber_colour = workbook.add_format({'bg_color': '#FFBF00',
+                               'font_color': '#665208'})
+                               
+worksheet.conditional_format('A1:P300', {'type':     'cell',
+                                   'criteria': '==',
+                                   'value':    '"Pass"',
+                                   'format':   green_colour})
+worksheet.conditional_format('A1:P300', {'type':     'cell',
+                                   'criteria': '==',
+                                   'value':    '"Fail"',
+                                   'format':   red_colour})
+worksheet.conditional_format('A1:P300', {'type':     'cell',
+                                   'criteria': '==',
+                                   'value':    '"Error"',
+                                   'format':   amber_colour})
+worksheet.conditional_format('O2:O300', {'type':     'cell',
+                                   'criteria': '>',
+                                   'value':    '0',
+                                   'format':   green_colour})
+                
+worksheet.conditional_format('O2:O300', {'type':     'cell',
+                                   'criteria': '<',
+                                   'value':    '0',
+                                   'format':   red_colour})
+                             
+writer.save()
